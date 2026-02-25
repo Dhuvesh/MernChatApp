@@ -1,0 +1,78 @@
+server {
+    listen 80;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri /index.html;
+    }
+
+    location /api {
+        proxy_pass http://backend:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location /socket.io/ {
+        proxy_pass http://backend:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+    }
+}
+
+Save.
+
+✅ Now Update docker-compose.yml
+
+Replace everything with:
+
+services:
+  backend:
+    build: ./server
+    env_file:
+      - ./server/.env
+    restart: unless-stopped
+    expose:
+      - "3000"
+
+  nginx:
+    build: ./client
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+Notice:
+
+❌ No frontend service
+❌ No port 5173
+❌ No port 3000
+
+✅ Rebuild Everything
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+✅ Check Ports
+docker ps
+
+You should see ONLY:
+
+0.0.0.0:80->80/tcp
+🎯 What This Does
+
+• Builds Vite
+• Converts it into static files
+• Nginx serves static files
+• Nginx proxies API + socket
+• Single origin
+• Cookies work
+• WebSocket works
+• No Vite errors
+
+You just moved from dev setup → proper deployment setup 🔥
+
+Run this and tell me what docker ps shows.
