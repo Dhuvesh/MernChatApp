@@ -1,0 +1,43 @@
+name: Deploy (Dynamic IP)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: ${{ secrets.AWS_REGION }}
+
+      - name: Get EC2 Public IP
+        id: ec2-ip
+        run: |
+          IP=$(aws ec2 describe-instances \
+            --instance-ids ${{ secrets.EC2_INSTANCE_ID }} \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text)
+          echo "EC2_IP=$IP" >> $GITHUB_ENV
+
+      - name: Setup SSH
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
+          chmod 600 key.pem
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@$EC2_IP << 'EOF'
+            cd /home/ubuntu/your-project-folder
+            git pull origin main
+            docker compose up -d --build
+          EOF
