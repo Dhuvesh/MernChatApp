@@ -37,7 +37,7 @@ jobs:
       - name: Deploy to EC2
         run: |
           ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@$EC2_IP << 'EOF'
-            cd /home/ubuntu/your-project-folder
+            cd /home/ubuntu/MernChatApp
             git pull origin main
             docker compose up -d --build
           EOF
